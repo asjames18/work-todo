@@ -5,7 +5,7 @@ A local project to-do app for Windows, with a Today dashboard, desktop reminders
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey)
-![Version](https://img.shields.io/badge/version-8.0.1-7c6cf0)
+![Version](https://img.shields.io/badge/version-8.0.2-7c6cf0)
 
 ## Download and install
 
