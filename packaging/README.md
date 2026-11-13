@@ -4,11 +4,10 @@ A fast, private to-do app for your projects. It runs on your PC (nothing is uplo
 
 ## Install (about 1 minute)
 
-1. **Extract the zip:** right-click `WorkToDo-Setup-<version>.zip` and choose **Extract All...**
-2. Open the extracted folder and double-click **`Install-WorkToDo.cmd`**.
+1. Open the downloaded `WorkToDo-Setup-<version>.zip` and double-click **`Install-WorkToDo.cmd`**. (Extracting first with right-click, **Extract All...** also works. If you run it straight from the zip, it finds the download in Downloads, Desktop or Documents and unpacks it for you.)
    - Windows may say *"Windows protected your PC"* or *"unknown publisher"*, because the installer isn't code-signed. Click **More info**, then **Run anyway**.
-3. The installer checks for **Python 3.10 or newer**. If it's missing, it opens the python.org download page. Install Python (tick **"Add python.exe to PATH"**), then run `Install-WorkToDo.cmd` again. It never installs anything without asking.
-4. Work To-Do opens into a short **setup wizard**: your name, light or dark theme, (optional) Outlook, (optional) AI, and reminders.
+2. The installer checks for **Python 3.10 or newer**. If it's missing, it opens the python.org download page. Install Python (tick **"Add python.exe to PATH"**), then run `Install-WorkToDo.cmd` again. It never installs anything without asking.
+3. Work To-Do opens into a short **setup wizard**: your name, light or dark theme, (optional) Outlook, (optional) AI, and reminders.
 
 What the installer does:
 - Copies the app to `%LOCALAPPDATA%\WorkToDo\app` (no admin rights needed). Your data lives separately in `%LOCALAPPDATA%\WorkToDo\data`.

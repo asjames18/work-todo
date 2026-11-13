@@ -7,7 +7,7 @@ The installer drops app\\installed.json, which is how the app knows it is an ins
 Run from a plain folder (no installed.json), data stays next to the code, exactly like older versions."""
 import json, os
 
-VERSION = "8.0.0"
+VERSION = "8.0.1"
 UPDATE_REPO = os.environ.get("WORKTODO_UPDATE_REPO") or "asjames18/work-todo"   # GitHub owner/repo whose Releases carry updates
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))

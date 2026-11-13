@@ -5,14 +5,14 @@ A local project to-do app for Windows, with a Today dashboard, desktop reminders
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey)
-![Version](https://img.shields.io/badge/version-8.0.0-7c6cf0)
+![Version](https://img.shields.io/badge/version-8.0.1-7c6cf0)
 
 ## Download and install
 
 Most people should grab the ready-made installer, not this source:
 
 1. Download **`WorkToDo-Setup-<version>.zip`** from the [latest release](https://github.com/asjames18/work-todo/releases/latest).
-2. Extract it and double-click **`Install-WorkToDo.cmd`**. You need Python 3.10 or newer. If it's missing, the installer opens python.org and stops. It never installs anything silently.
+2. Open the zip and double-click **`Install-WorkToDo.cmd`** (it unpacks itself if you run it from inside the zip). You need Python 3.10 or newer. If it's missing, the installer opens python.org and stops. It never installs anything silently.
 3. The app opens into a short setup wizard.
 
 The installer puts the app in `%LOCALAPPDATA%\WorkToDo\app` and your data in `%LOCALAPPDATA%\WorkToDo\data`. It adds Desktop and Start menu shortcuts (Ctrl+Alt+T) and can start the reminder helper at sign-in. No admin rights are needed. The full end-user guide is in [`packaging/README.md`](packaging/README.md), which ships inside the zip.
