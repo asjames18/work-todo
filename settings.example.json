@@ -1,0 +1,13 @@
+{
+  "reminders": true,
+  "morning": "09:00",
+  "lead": 15,
+  "ai": {
+    "enabled": false,
+    "provider": "rules",
+    "base_url": "http://127.0.0.1:1234/v1",
+    "model": "",
+    "api_key_env": "",
+    "voice_model": "small.en"
+  }
+}
