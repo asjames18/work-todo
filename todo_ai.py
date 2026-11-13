@@ -534,14 +534,14 @@ def parse_task_rules(text, ctx, project_hint=None, now=None):
             if nm and re.search(r"(?<![\w])" + re.escape(nm) + r"(?![\w])", low):
                 found["project"] = p["id"]
                 break
-        if "project" not in found:  # spacing/punctuation differences, e.g. speech gives "Element 451" for Element451
+        if "project" not in found:  # spacing/punctuation differences, e.g. speech gives "Acme 451" for Acme451
             squash = re.sub(r"[^a-z0-9]", "", low)
             for p in projects:
                 nm = re.sub(r"[^a-z0-9]", "", (p.get("name") or "").lower())
                 if len(nm) >= 6 and nm in squash:
                     found["project"] = p["id"]
                     break
-        if "project" not in found:  # also try the first word of multi-word project names, e.g. "Banner"
+        if "project" not in found:  # also try the first word of multi-word project names, e.g. "Payroll" for "Payroll System"
             for p in projects:
                 head = re.split(r"[\s\-–:]+", (p.get("name") or "").strip())[0].lower()
                 if len(head) >= 5 and re.search(r"(?<![\w])" + re.escape(head) + r"(?![\w])", low):

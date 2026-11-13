@@ -6,6 +6,9 @@ It starts with Windows (a shortcut in your Startup folder), reads todo-data.json
   * a heads-up shortly before a task's due time, and a "due now" alert at the due time.
 It never changes your tasks. It remembers what it already showed in reminder-state.json.
 Turn reminders off in the app (Settings), or delete "Work To-Do Reminders" from shell:startup.
+It also owns the global quick-add hotkey (Ctrl+Alt+N by default): a tiny add-task box (quickadd.pyw) pops up
+even when the Work To-Do window is closed. The hotkey is registered with the Win32 RegisterHotKey API via ctypes
+on a dedicated thread with its own message loop; turn it off in the app (Settings -> Quick add).
 Run with --test to show one test notification and exit. No installs: pure Python + PowerShell."""
 import json, os, sys, time, math, threading, subprocess, datetime as dt
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -13,9 +16,15 @@ from urllib.parse import urlparse, parse_qs
 from xml.sax.saxutils import escape, quoteattr
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.environ.get("TODO_DATA") or os.path.join(APP_DIR, "todo-data.json")
-STATE_FILE = os.environ.get("TODO_REMINDER_STATE") or os.path.join(APP_DIR, "reminder-state.json")
-LOG_FILE = os.path.join(APP_DIR, "reminder.log")
+sys.path.insert(0, APP_DIR)
+try:
+    import wtd_paths as _P
+    DATA_DIR = _P.DATA_DIR
+except Exception:
+    DATA_DIR = APP_DIR
+DATA_FILE = os.environ.get("TODO_DATA") or os.path.join(DATA_DIR, "todo-data.json")
+STATE_FILE = os.environ.get("TODO_REMINDER_STATE") or os.path.join(DATA_DIR, "reminder-state.json")
+LOG_FILE = os.path.join(DATA_DIR, "reminder.log")
 PORT = int(os.environ.get("TODO_REMINDER_PORT", "48232"))
 OPEN_URL = f"http://127.0.0.1:{PORT}/open"
 ICON_PNG = os.path.join(APP_DIR, "toast-icon.png")
@@ -25,7 +34,9 @@ DEFAULTS = {"reminders": True, "morning": "09:00", "lead": 15}
 VIEWS = ("today", "upcoming", "overdue", "notes")
 RANK = {"urgent": 0, "high": 1, "normal": 2}
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-_status = {"started": dt.datetime.now().isoformat(timespec="seconds"), "last_check": None, "last_toast": None, "enabled": None}
+_status = {"started": dt.datetime.now().isoformat(timespec="seconds"), "last_check": None, "last_toast": None, "enabled": None,
+           "hotkey": "Ctrl+Alt+N", "hotkey_ok": False, "hotkey_error": "", "version": getattr(sys.modules.get("wtd_paths"), "VERSION", "")}
+HOTKEY_ID = 0x5744
 _last_open = [0.0]
 
 
@@ -258,6 +269,48 @@ def check(now=None, notify=show_toast):
 
 
 # ---------- tiny local endpoint: lets a notification click open the app ----------
+# ---------- global quick-add hotkey (Win32 RegisterHotKey via ctypes) ----------
+def quick_add_enabled():
+    d = read_data() or {}
+    s = d.get("settings") if isinstance(d.get("settings"), dict) else {}
+    return s.get("quick_add", True) is not False
+
+
+def open_quick_add():
+    if not quick_add_enabled():
+        return
+    try:
+        import ctypes
+        ctypes.windll.user32.AllowSetForegroundWindow(-1)  # ASFW_ANY: let the quick-add box take focus
+    except Exception:
+        pass
+    try:
+        subprocess.Popen([pythonw(), os.path.join(APP_DIR, "quickadd.pyw")], cwd=APP_DIR, creationflags=NO_WINDOW)
+    except Exception as e:
+        log(f"quick add failed: {e}")
+
+
+def hotkey_loop():
+    """RegisterHotKey must be called on the thread that pumps the messages, so this thread does both."""
+    if os.name != "nt":
+        _status["hotkey_error"] = "Windows only"
+        return
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.windll.user32
+    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, WM_HOTKEY = 0x1, 0x2, 0x4000, 0x0312
+    if not user32.RegisterHotKey(None, HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, ord("N")):
+        _status["hotkey_error"] = "Ctrl+Alt+N is already used by another app"
+        log("hotkey Ctrl+Alt+N could not be registered (in use)")
+        return
+    _status["hotkey_ok"] = True
+    log("hotkey Ctrl+Alt+N registered")
+    msg = wintypes.MSG()
+    while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+        if msg.message == WM_HOTKEY and msg.wParam == HOTKEY_ID:
+            open_quick_add()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -270,6 +323,20 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         if body:
             self.wfile.write(body)
+
+    def do_POST(self):
+        # /quit lets the app restart this helper after an update. Custom header = other websites can't trigger it.
+        if self.headers.get("Host", "") not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}") or self.headers.get("X-WorkTodo") != "1":
+            return self._send(403)
+        if self.path == "/quit":
+            self._send(202)
+            log("quit requested")
+            threading.Timer(0.3, lambda: os._exit(0)).start()
+            return
+        if self.path == "/quick-add":
+            open_quick_add()
+            return self._send(202)
+        self._send(404)
 
     def do_GET(self):
         if self.headers.get("Host", "") not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}"):
@@ -305,6 +372,7 @@ def main():
     except OSError:
         return  # already running
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    threading.Thread(target=hotkey_loop, daemon=True).start()
     log(f"started (pid {os.getpid()})")
     while True:
         try:

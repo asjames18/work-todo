@@ -10,7 +10,12 @@ Only headers and a ~300 character preview are kept (email-cache.json). Nothing h
 import datetime as dt, email, email.policy, email.utils, hashlib, html, html.parser, json, os, re, struct, subprocess, tempfile, threading, time
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_FILE = os.environ.get("TODO_EMAIL_CACHE") or os.path.join(APP_DIR, "email-cache.json")
+try:
+    import wtd_paths as _P
+    _DATA_DIR = _P.DATA_DIR
+except Exception:
+    _DATA_DIR = APP_DIR
+CACHE_FILE = os.environ.get("TODO_EMAIL_CACHE") or os.path.join(_DATA_DIR, "email-cache.json")
 PS_SCRIPT = os.path.join(APP_DIR, "outlook_mail.ps1")
 NO_WINDOW_FLAG = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 PREVIEW = 300

@@ -3,40 +3,59 @@
 A local project to-do app for Windows, with a Today dashboard, desktop reminders, and optional email and AI helpers.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
-![Python](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey)
-![Status](https://img.shields.io/badge/status-private%20%7C%20active-2ea44f)
+![Version](https://img.shields.io/badge/version-8.0.0-7c6cf0)
+
+## Download and install
+
+Most people should grab the ready-made installer, not this source:
+
+1. Download **`WorkToDo-Setup-<version>.zip`** from the [latest release](https://github.com/asjames18/work-todo/releases/latest).
+2. Extract it and double-click **`Install-WorkToDo.cmd`**. You need Python 3.10 or newer. If it's missing, the installer opens python.org and stops. It never installs anything silently.
+3. The app opens into a short setup wizard.
+
+The installer puts the app in `%LOCALAPPDATA%\WorkToDo\app` and your data in `%LOCALAPPDATA%\WorkToDo\data`. It adds Desktop and Start menu shortcuts (Ctrl+Alt+T) and can start the reminder helper at sign-in. No admin rights are needed. The full end-user guide is in [`packaging/README.md`](packaging/README.md), which ships inside the zip.
 
 ## Overview
 
-Work To-Do runs a private HTTP server on `127.0.0.1` (default port `48231`) and opens in its own Microsoft Edge window. Projects, tasks, and notes are stored in `todo-data.json` next to the app. No third-party Python packages are required for the app itself.
+Work To-Do runs a private HTTP server on `127.0.0.1` (default port `48231`) and opens in its own Microsoft Edge window. It uses only the Python standard library.
 
-The landing view is a **Today** dashboard: a built-in daily brief, overdue and due-today tasks, priorities by project, the schedule for today and the next 7 days, work email that is not yet a task, recent notes, and recent Live Transcriber meeting notes (read-only).
+The landing view is a **dashboard**: a built-in daily brief, overdue and due-today tasks, priorities by project, the schedule for today and the next 7 days, work email that isn't a task yet, focus time, and a "Get set up" checklist for new users.
 
-## Key Features
+## Features (v8)
 
-- **Today dashboard** — Open, due-today, overdue, and done-today counts, plus a built-in brief written on this PC. An optional AI brief is available when AI suggestions are turned on with an OpenAI-compatible model.
-- **Projects, tasks, and notes** — Color-coded projects, priorities (normal, high, urgent), due dates and times, search, and smart views (Today, Upcoming, Overdue).
-- **Desktop reminders** — A separate no-window helper (`reminder.pyw`) can show a morning summary of tasks due today and overdue tasks, a heads-up before a timed task, and an alert at the due time. Reminders work even when the main window is closed.
-- **Keyboard shortcuts** — Navigation, task actions, undo, and settings. Press `?` in the app for the full list. A suggested desktop shortcut key is `Ctrl+Alt+T`.
-- **Undo** — Deleting or completing a task, dismissing an email, or applying an AI change can be undone with `Ctrl+Z`.
-- **Work email (optional)** — A read-only view of recent Inbox mail from classic Outlook, plus drag-and-drop or paste of `.eml`, `.msg`, or copied email text. Nothing is added to your list until you confirm it. Mail is never sent, moved, deleted, flagged, or marked read.
-- **AI suggestions (optional, off by default)** — Built-in local rules (no network), or an OpenAI-compatible provider such as LM Studio, Ollama, or OpenRouter. Suggested changes (priority, due date, mark done, add or move a task, add a note) go through a confirm card first. You can also ask AI to add a task from free text or from a voice clip transcribed locally.
-- **Live Transcriber (optional)** — Voice input uses the Live Transcriber's local Whisper model when that app is installed. The dashboard can also show recent meeting notes from that app, read-only.
+| Feature | Shortcut |
+| --- | --- |
+| First-run setup wizard (welcome, name, theme, optional Outlook, optional AI via OpenRouter, reminders and morning time) | Shown when there is no data. Reopen it from Settings |
+| "Get set up" checklist on the dashboard that ticks itself and can be dismissed | C on the dashboard |
+| Light and dark themes, six accent colours | Ctrl+Shift+L / Ctrl+Shift+K |
+| Global quick add, even with the window closed (in `reminder.pyw` through Win32 `RegisterHotKey`) | Ctrl+Alt+N |
+| Recurring tasks: daily, weekdays, weekly on a day, monthly on day N. Completing one creates the next | Y on a selected task |
+| Focus timer (Pomodoro, 25/5 by default, adjustable) that logs time per task and project, shown in stats | F, Shift+F pause, Ctrl+Shift+F stop |
+| Weekly review: done, slipped or overdue, next week, time per project, optional AI recap with a local fallback | G then W; [ ] change week; A for the AI recap |
+| Back up or restore everything as one JSON file. Restore makes a backup first | Ctrl+Shift+E / Ctrl+Shift+O |
+| Shortcut help and a guided tour (shown on first run) | ? then T |
+| Update check through GitHub Releases, with SHA-256 verification and rollback | Ctrl+Shift+U, or Settings, then Updates |
+| Projects, tasks, notes, priorities, due dates, smart views, undo | N, Shift+N, P, D, Ctrl+Z |
+| Desktop reminders (morning summary, heads-up, due alert) | Settings (Ctrl+,) |
+| Optional read-only classic Outlook inbox, and optional AI suggestions behind confirm cards | G then E |
 
-## Screenshots
+![Dashboard](docs/screenshot-dashboard.png)
 
-<!-- ![Screenshot](docs/screenshot.png) -->
+| Setup wizard | Weekly review | Light theme |
+| --- | --- | --- |
+| ![Wizard](docs/screenshot-wizard.png) | ![Review](docs/screenshot-review.png) | ![Light](docs/screenshot-light.png) |
 
 ## Requirements
 
 - Windows
-- Python 3.14 (standard library only; no pip packages for the app itself)
+- Python 3.10 or newer (standard library only, no pip packages)
 - Microsoft Edge (used to host the app window; the system browser is used as a fallback)
 - Classic Outlook (optional), for the read-only work-email inbox
 - [Live Transcriber](https://github.com/asjames18/live-transcriber) (optional), for voice input and meeting notes. By default the app looks for a sibling folder named `transcriber`. You can point it at a different location with the `WORKTODO_TX_DIR` environment variable.
 
-## Installation
+## Running from source
 
 From this folder:
 
@@ -64,11 +83,42 @@ To start reminders with Windows, add a Startup-folder shortcut to `reminder.pyw`
 
 `todo-classic.pyw` is an older Tkinter version kept for reference.
 
+## Building the installer zip
+
+```bat
+python packaging\build_dist.py . dist
+```
+
+This writes `dist\WorkToDo-Setup-<VERSION>.zip` and `dist\WorkToDo-Setup-<VERSION>.zip.sha256`. The build refuses to run if it finds API keys or personal strings in the files it packs. Scripts are converted to CRLF, and the zip layout is `app\`, `installer\`, `Install-WorkToDo.cmd`, `Uninstall-WorkToDo.cmd` and `README.md`.
+
+## Publishing an update
+
+Installed copies check `GET https://api.github.com/repos/asjames18/work-todo/releases/latest` at most once a day (and whenever someone clicks **Check for updates**). The repo name is the `UPDATE_REPO` constant in `wtd_paths.py`, and the `WORKTODO_UPDATE_REPO` environment variable overrides it. A 404 (no release yet, or a private repo) or being offline is handled quietly.
+
+To ship a new version:
+
+1. Bump `VERSION` in `wtd_paths.py`, e.g. `VERSION = "8.1.0"`. Commit and push.
+2. Build: `python packaging\build_dist.py . dist`.
+3. Create a GitHub Release on `asjames18/work-todo` with the tag **`v8.1.0`**. The tag must be newer than the version people have installed, because `tag_name` is compared as numbers. Write the release notes, since they appear in the in-app "Update available" banner.
+4. Attach **`WorkToDo-Setup-8.1.0.zip`** and **`WorkToDo-Setup-8.1.0.zip.sha256`**. Alternatively, put a line `sha256: <64-hex>` in the release notes.
+5. Publish. The repo must be **public** so the unauthenticated API call can see the release. The download link for a website is `https://github.com/asjames18/work-todo/releases/latest/download/WorkToDo-Setup-<version>.zip`. For a link that never changes, `https://github.com/asjames18/work-todo/releases/latest` always points at the newest release.
+
+What happens on users' PCs when they click **Update now**:
+
+1. The zip asset is downloaded to a temp folder (60 MB cap, https only).
+2. The SHA-256 is checked against the `.sha256` asset or the `sha256:` line. A mismatch stops the update.
+3. Zip entries are checked for path traversal.
+4. The current `app\` folder is backed up to `data\backups\app-<old version>-<timestamp>`.
+5. Only code files are copied over, never anything in `data\` or the settings.
+6. The app restarts, and the reminder helper restarts with it. If any step fails, the old code is restored.
+
+Users can turn update checks off under Settings, then Updates. Copies run from source (no `installed.json`) default to updates off and cannot self-update.
+
 ## Configuration
 
 Copy `settings.example.json` if you want a reference for the settings shape. Live settings (reminders, morning summary time, heads-up lead time, email, and AI) are stored inside `todo-data.json`, which is created on first run and is not committed.
 
-AI features stay off until you turn them on in **Reminders & settings**. Built-in rules run on this PC with no network. For OpenRouter or another OpenAI-compatible provider, set the **name** of an environment variable in settings (`api_key_env`), not the key itself. For OpenRouter, create a User environment variable named:
+AI features stay off until you turn them on in the setup wizard or in **Reminders & settings**. If you paste an OpenRouter key into the wizard, it is written only to your Windows **user** environment variable `OPENROUTER_API_KEY` (`HKCU\Environment`), never to the app's files. Built-in rules run on this PC with no network. For OpenRouter or another OpenAI-compatible provider, set the **name** of an environment variable in settings (`api_key_env`), not the key itself. For OpenRouter, create a User environment variable named:
 
 ```bat
 OPENROUTER_API_KEY
@@ -80,7 +130,9 @@ Optional environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `TODO_DATA` | Path to the data file (default: `todo-data.json` next to the app) |
+| `WORKTODO_DATA_DIR` | Folder for data files (default: `..\data` when installed, else next to the app) |
+| `TODO_DATA` | Path to the data file (overrides the folder above) |
+| `WORKTODO_UPDATE_REPO` | `owner/repo` to check for releases (default `asjames18/work-todo`) |
 | `TODO_PORT` | Main app port (default: `48231`) |
 | `TODO_REMINDER_PORT` | Reminder helper port (default: `48232`) |
 | `WORKTODO_TX_DIR` | Live Transcriber install folder |
@@ -118,6 +170,11 @@ Press `?` at any time for keyboard shortcuts.
 | `voice_helper.py` | Local Whisper transcription helper, used with Live Transcriber's virtual environment |
 | `todo-classic.pyw` | Earlier Tkinter version, kept for reference |
 | `settings.example.json` | Example settings shape (reminders and AI). Not used at runtime |
+| `quickadd.pyw` | Small always-on-top quick-add box opened by Ctrl+Alt+N |
+| `wtd_paths.py` | `VERSION`, `UPDATE_REPO`, and where the data lives (installed vs. source layout) |
+| `wtd_update.py` | GitHub Releases check, download, SHA-256 verification, backup, replace and rollback |
+| `packaging/` | `Install-WorkToDo.cmd`, `Uninstall-WorkToDo.cmd`, `installer/*.ps1`, the end-user `README.md` and `build_dist.py` |
+| `docs/` | Screenshots |
 | `todo.ico` | Application icon |
 | `toast-icon.png` | Icon used in Windows reminder toasts |
 | `.gitignore` | Excludes data files, caches, logs, and secrets |
