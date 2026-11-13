@@ -1,7 +1,8 @@
-"""Work To-Do voice helper: transcribe one short clip with the Live Transcriber's local Whisper models.
-Run with the transcriber's venv python (it has faster-whisper). Reads the models from transcriber\\models,
-never downloads anything (HF_HUB_OFFLINE=1) and never writes into the transcriber folder.
-Usage: python voice_helper.py <audio file> [--model small.en|large-v3-turbo] [--device auto|cpu|cuda] [--prompt "names"]
+"""Work To-Do voice helper: transcribe one short clip with a local Whisper model (faster-whisper).
+Run with a venv python that has faster-whisper: Work To-Do's own voice pack (installer option) or Live Transcriber's.
+Reads the models from --models (default: transcriber\\models next to this app's folder), never downloads anything
+(HF_HUB_OFFLINE=1) and never writes into the models folder.
+Usage: python voice_helper.py <audio file> [--model small.en|large-v3-turbo] [--device auto|cpu|cuda] [--prompt "names"] [--models DIR]
 Prints one JSON line: {"text": ..., "model": ..., "device": ..., "seconds": ...} or {"error": ...}."""
 import os, sys, glob, json, time, argparse
 
@@ -45,11 +46,12 @@ def main():
     ap.add_argument("--model", default="small.en")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--prompt", default="")
+    ap.add_argument("--models", default="")
     a = ap.parse_args()
     t0 = time.time()
     add_cuda_dll_dirs()
     from faster_whisper import WhisperModel
-    models = os.path.join(TX_DIR, "models")
+    models = a.models or os.path.join(TX_DIR, "models")
     audio = load_audio(a.audio)
     if audio.size < 1600:
         print(json.dumps({"text": "", "model": a.model, "device": "-", "seconds": round(time.time() - t0, 2), "audio_seconds": 0}))

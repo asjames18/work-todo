@@ -44,9 +44,43 @@ except Exception as _e:  # ...and without the email module
 _email_lock = threading.Lock()   # one Outlook read at a time
 _email_job = {"running": False, "started": 0}
 MAX_UPLOAD = 25 * 1024 * 1024
-TX_DIR = os.environ.get("WORKTODO_TX_DIR") or os.path.join(os.path.dirname(APP_DIR), "transcriber")
-TX_PY = os.path.join(TX_DIR, ".venv", "Scripts", "python.exe")
 VOICE_HELPER = os.path.join(APP_DIR, "voice_helper.py")
+
+
+def _voice_candidates():
+    """Places a local Whisper (faster-whisper venv + models) can come from, best first:
+    1. WORKTODO_TX_DIR (a Live Transcriber source folder), 2. Work To-Do's own voice pack (installer option, in installed.json),
+    3. an installed Live Transcriber (%LOCALAPPDATA%\\LiveTranscriber), 4. a 'transcriber' folder next to this app's folder.
+    Each entry is (python.exe, models dir, transcriber data dir for meeting notes)."""
+    out = []
+    env = os.environ.get("WORKTODO_TX_DIR")
+    if env:
+        out.append((os.path.join(env, ".venv", "Scripts", "python.exe"), os.path.join(env, "models"), env))
+    inst = P.INSTALLED or {}
+    if inst.get("voice_python") and inst.get("voice_models"):
+        out.append((os.path.normpath(os.path.join(APP_DIR, inst["voice_python"])), os.path.normpath(os.path.join(APP_DIR, inst["voice_models"])), ""))
+    lt = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "LiveTranscriber")
+    out.append((os.path.join(lt, "venv", "Scripts", "python.exe"), os.path.join(lt, "models"), os.path.join(lt, "data")))
+    sib = os.path.join(os.path.dirname(APP_DIR), "transcriber")
+    out.append((os.path.join(sib, ".venv", "Scripts", "python.exe"), os.path.join(sib, "models"), sib))
+    return out
+
+
+def voice_paths():
+    """(python.exe, models dir) of the first complete local Whisper, or the first candidate when none is complete."""
+    c = _voice_candidates()
+    for py, models, _ in c:
+        if os.path.exists(py) and os.path.isdir(models):
+            return py, models
+    return c[0][0], c[0][1]
+
+
+def meet_dir():
+    """Folder with Live Transcriber meeting notes (*-notes.json), read-only."""
+    if os.environ.get("WORKTODO_MEET_DIR"):
+        return os.environ["WORKTODO_MEET_DIR"]
+    c = [os.path.join(d, "transcripts", "notes") for _, _, d in _voice_candidates() if d]
+    return next((d for d in c if os.path.isdir(d)), c[0] if c else "")
 MAX_AUDIO = 20 * 1024 * 1024
 
 
@@ -577,7 +611,8 @@ def reminder_status():
 
 
 def voice_available():
-    return os.path.exists(TX_PY) and os.path.exists(VOICE_HELPER) and os.path.isdir(os.path.join(TX_DIR, "models"))
+    py, models = voice_paths()
+    return os.path.exists(py) and os.path.exists(VOICE_HELPER) and os.path.isdir(models)
 
 
 def refresh_env_key(name="OPENROUTER_API_KEY"):
@@ -609,7 +644,7 @@ def ai_status():
 def transcribe_clip(handler, data):
     """Save the posted clip to a temp file, run voice_helper.py with the transcriber's venv python, delete the clip."""
     if not voice_available():
-        raise todo_ai.AIError("local Whisper isn't available (the Live Transcriber's .venv or models weren't found)")
+        raise todo_ai.AIError("local Whisper isn't installed. Run Install-WorkToDo.cmd again and say yes to voice input (or install Live Transcriber)")
     n = int(handler.headers.get("Content-Length", "0"))
     if n <= 0 or n > MAX_AUDIO:
         raise todo_ai.AIError("the recording is empty or too long")
@@ -625,7 +660,9 @@ def transcribe_clip(handler, data):
         with os.fdopen(fd, "wb") as f:
             f.write(audio)
         with _voice_lock:
-            r = subprocess.run([TX_PY, VOICE_HELPER, path, "--model", model, "--device", "auto" if model != "small.en" else "cpu", "--prompt", prompt],
+            vpy, vmodels = voice_paths()
+            r = subprocess.run([vpy, VOICE_HELPER, path, "--model", model, "--device", "auto" if model != "small.en" else "cpu", "--prompt", prompt,
+                                "--models", vmodels],
                                capture_output=True, text=True, timeout=180, creationflags=NO_WINDOW_FLAG, cwd=APP_DIR)
         line = (r.stdout or "").strip().splitlines()[-1:] or [""]
         try:
@@ -799,7 +836,6 @@ def email_setup_outlook():
 
 
 # ---------------------------------------------------------------- v7: Dashboard (Today at a glance)
-MEET_DIR = os.environ.get("WORKTODO_MEET_DIR") or os.path.join(TX_DIR, "transcripts", "notes")
 _brief_lock = threading.Lock()   # one AI brief at a time
 
 
@@ -817,12 +853,12 @@ def _meeting_when(stem, fallback_ts):
 def meetings_list(limit=6):
     """Latest Live Transcriber meeting notes (read-only: *-notes.json in transcriber\\transcripts\\notes)."""
     try:
-        names = [n for n in os.listdir(MEET_DIR) if n.lower().endswith("-notes.json")]
+        names = [n for n in os.listdir(meet_dir()) if n.lower().endswith("-notes.json")]
     except OSError:
         return {"available": False, "items": []}
     paths = []
     for n in names:
-        p = os.path.join(MEET_DIR, n)
+        p = os.path.join(meet_dir(), n)
         try:
             paths.append((os.path.getmtime(p), p))
         except OSError:
@@ -2111,7 +2147,7 @@ function aiAskCard(on){const c=el("div","aiask"+(on?"":" off"));
   const cfg=aiCfg();
   c.innerHTML=`<div class="lbl">${ICON.spark}<span>Ask AI to add a task</span><span class="hint" style="margin-left:auto">${on?(cfg.provider==="rules"?"Built-in parser · on this PC":"Your model · rules as backup"):"Off"}</span></div>
   <div class="aiaskrow"><textarea id="aiText" rows="1" placeholder="${on?"e.g. remind me to send the Oracle keys to Mike tomorrow at 3, high priority":"Off. Turn on AI suggestions in Settings to use this."}" ${on?"":"disabled"}></textarea>
-  <button type="button" class="micbtn${ai.voice==="rec"?" rec":""}" id="aiMic" ${on?"":"disabled"} title="${on?"Speak your task (Ctrl+Shift+Space). Recorded and transcribed on this PC by the Live Transcriber's local Whisper model; nothing is sent online. No mic set up? Click the box and press Win+H for Windows voice typing.":"Off. Turn on AI suggestions in Settings. (Windows voice typing, Win+H, always works in any text box.)"}">${ai.voice==="rec"?ICON.stop:ICON.mic}</button>
+  <button type="button" class="micbtn${ai.voice==="rec"?" rec":""}" id="aiMic" ${on?"":"disabled"} title="${on?"Speak your task (Ctrl+Shift+Space). Recorded and transcribed on this PC by a local Whisper model; nothing is sent online. No mic set up? Click the box and press Win+H for Windows voice typing.":"Off. Turn on AI suggestions in Settings. (Windows voice typing, Win+H, always works in any text box.)"}">${ai.voice==="rec"?ICON.stop:ICON.mic}</button>
   <button type="button" class="btn" id="aiGo" ${on?"":"disabled"}>Add with AI</button></div>
   <div class="aistat" id="aiStat">${esc(ai.voiceMsg||(on?"Enter parses it · Shift+Enter new line · you check every field before it's added":"Win+H (Windows voice typing) works in any text box, even while this is off."))}</div>`;
   if(on){const t=c.querySelector("#aiText");
@@ -2203,7 +2239,7 @@ function openTaskConfirm(task,note,said,opts){opts=opts||{};
   m.querySelector("#cfYes").onclick=add; m.querySelector("#cfNo").onclick=closeModal;
   m.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();add();}});
   setTimeout(()=>{ti.focus(); if(opts.add){ti.style.height=Math.min(ti.scrollHeight+4,230)+"px"; ti.setSelectionRange(0,0); ti.scrollTop=0;} else ti.setSelectionRange(ti.value.length,ti.value.length);});}
-/* voice: record in the window, transcribe on this PC with the Live Transcriber's Whisper (never the cloud Web Speech API) */
+/* voice: record in the window, transcribe on this PC with local Whisper (never the cloud Web Speech API) */
 async function toggleMic(){if(!aiOn())return;
   if(ai.voice==="rec"){stopMic();return;} if(ai.voice==="busy")return;
   if(!navigator.mediaDevices||!window.MediaRecorder){setAIStat("Recording isn't available here. Press Win+H in the box for Windows voice typing.");return;}
@@ -2234,7 +2270,7 @@ function aiSettingsHtml(){const c=aiCfg(), oa=c.provider==="openai_compatible";
     <label><span class="cflbl">Model</span><input class="field" id="sModel" value="${esc(c.model)}" placeholder="e.g. qwen2.5-7b-instruct or llama3.1" spellcheck="false"></label>
     <label><span class="cflbl">API key environment variable (the NAME, not the key)</span><input class="field" id="sKeyEnv" value="${esc(c.api_key_env)}" placeholder="Leave empty for LM Studio / Ollama · e.g. OPENROUTER_API_KEY" spellcheck="false" autocomplete="off"></label>
     <div class="nrow"><span class="hint" id="sKeyMsg">The key itself is never saved in this app. Set it in Windows as an environment variable, then restart the app.</span><button type="button" class="btn ghost sm" id="sAITest" style="margin-left:auto">Test connection</button></div></div>
-  <div class="srow"><div class="st"><b>Voice model</b><small>Speech in "Ask AI to add" is transcribed on this PC with the Live Transcriber's Whisper. Nothing is sent online. Win+H (Windows voice typing) also works in any box.</small></div>
+  <div class="srow"><div class="st"><b>Voice model</b><small>Speech in "Ask AI to add" is transcribed on this PC with local Whisper (the installer's voice option, or Live Transcriber's). Nothing is sent online. Win+H (Windows voice typing) also works in any box.</small></div>
     <span class="pill" id="sVoice">…</span><select class="field" id="sVModel"><option value="small.en"${c.voice_model==="small.en"?" selected":""}>small.en (fast, CPU)</option><option value="large-v3-turbo"${c.voice_model==="large-v3-turbo"?" selected":""}>large-v3-turbo (most accurate, GPU)</option></select></div>`;}
 function wireAISettings(m){
   const putAI=patch=>{data.settings=Object.assign(settings(),{ai:Object.assign(aiCfg(),patch)}); save(); renderSidebar();};

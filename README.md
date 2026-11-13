@@ -9,10 +9,13 @@ A local project to-do app for Windows, with a Today dashboard, desktop reminders
 
 ## Download and install
 
-Most people should grab the ready-made installer, not this source:
+Most people should grab the ready-made installer, not this source. It sets up everything the app needs:
 
 1. Download **`WorkToDo-Setup-<version>.zip`** from the [latest release](https://github.com/asjames18/work-todo/releases/latest).
-2. Open the zip and double-click **`Install-WorkToDo.cmd`** (it unpacks itself if you run it from inside the zip). You need Python 3.10 or newer. If it's missing, the installer opens python.org and stops. It never installs anything silently.
+2. Open the zip and double-click **`Install-WorkToDo.cmd`** (it unpacks itself if you run it from inside the zip). Windows SmartScreen may warn because the installer isn't code-signed: click **More info**, then **Run anyway**.
+   - If Python 3.10+ is missing, it asks first, then downloads and installs the official python.org **Python 3.13.17** for your account (SHA-256 and signature checked, no admin).
+   - It offers **voice input**: a private faster-whisper environment and the `small.en` Whisper model (about 550 MB download, 1 GB on disk, 3-10 minutes). If Live Transcriber is installed, it reuses that instead.
+   - Nothing is installed without asking. Offline or a failed download stops safely; running it again resumes and skips what's done.
 3. The app opens into a short setup wizard.
 
 The installer puts the app in `%LOCALAPPDATA%\WorkToDo\app` and your data in `%LOCALAPPDATA%\WorkToDo\data`. It adds Desktop and Start menu shortcuts (Ctrl+Alt+T) and can start the reminder helper at sign-in. No admin rights are needed. The full end-user guide is in [`packaging/README.md`](packaging/README.md), which ships inside the zip.
@@ -84,6 +87,10 @@ To start reminders with Windows, add a Startup-folder shortcut to `reminder.pyw`
 `todo-classic.pyw` is an older Tkinter version kept for reference.
 
 ## Building the installer zip
+
+`python packaging/build_dist.py . dist` builds `dist/WorkToDo-Setup-<version>.zip` and its `.sha256`. It refuses to build if any packed file contains keys, tokens or personal strings. The installer scripts live in `packaging/installer/` (`SetupCommon.ps1` is shared with the other Windows apps: Python, venv, model downloads, shortcuts). Sandbox test switches: `-InstallRoot -ShortcutName -DesktopDir -StartMenuDir -StartupDir -NoHotkey -NoStartup -NoLaunch -Quiet -WithVoice -NoVoice -InstallPython -ForcePythonInstall -PythonDir` (with `-PythonDir`, a throwaway Python is unpacked into that folder and nothing is registered in Windows).
+
+Equivalent command on Windows:
 
 ```bat
 python packaging\build_dist.py . dist

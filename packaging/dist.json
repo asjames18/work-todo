@@ -1,0 +1,5 @@
+{"zip_prefix": "WorkToDo-Setup", "version_file": "wtd_paths.py", "version_regex": "^VERSION = \"([^\"]+)\"",
+ "app_files": ["todo.pyw", "reminder.pyw", "quickadd.pyw", "todo_ai.py", "todo_email.py", "voice_helper.py", "outlook_mail.ps1",
+               "wtd_paths.py", "wtd_update.py", "requirements-voice.txt", "todo.ico", "toast-icon.png"],
+ "top_files": ["Install-WorkToDo.cmd", "Uninstall-WorkToDo.cmd", "README.md"],
+ "installer_files": ["Install-WorkToDo.ps1", "Uninstall-WorkToDo.ps1", "SetupCommon.ps1"]}
