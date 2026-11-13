@@ -5,7 +5,7 @@ A local to-do and planning app for Windows. Your projects, tasks and notes stay 
 [![Latest release](https://img.shields.io/github/v/release/asjames18/work-todo)](https://github.com/asjames18/work-todo/releases/latest)
 ![Platform](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/license-not%20specified-lightgrey)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Overview
 
@@ -156,9 +156,9 @@ Copy `settings.example.json` if you want a reference for the settings shape. Liv
 
 **An in-app update stops.** Installed copies verify the SHA-256 before replacing files and restore the previous app folder if a step fails. Check your connection, or download the zip from the [latest release](https://github.com/asjames18/work-todo/releases/latest) and run the installer again.
 
-## License and third-party notices
+## License
 
-This repository does not include a `LICENSE` file, so a license is not specified here.
+This project is licensed under the [MIT License](LICENSE). Copyright (c) 2026 Antonio James.
 
 The core app uses the Python standard library. Optional voice input uses packages listed in `requirements-voice.txt`, including faster-whisper, CTranslate2, PyAV, NumPy, Hugging Face Hub, tokenizers and ONNX Runtime. Those projects are licensed by their authors; see each project for its terms. Optional AI features may call an OpenAI-compatible endpoint that you configure (OpenRouter by default). Python itself is licensed under the [PSF License](https://docs.python.org/3/license.html).
 
